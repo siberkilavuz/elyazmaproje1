@@ -2,26 +2,51 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>El ile Yazı Yazma</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El ile Yazı Yazma PRO</title>
+
 <style>
-    body {
-        margin: 0;
-        background: black;
-        overflow: hidden;
-    }
-    canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-    video {
-        display: none;
-    }
+body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+    font-family: Arial;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+}
+
+button {
+    padding: 10px;
+    margin: 5px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+}
 </style>
 </head>
+
 <body>
 
-<video id="video" autoplay playsinline></video>
+<div class="controls">
+    <button onclick="clearCanvas()">🧽 Temizle</button>
+    <button onclick="setColor('red')">🔴</button>
+    <button onclick="setColor('lime')">🟢</button>
+    <button onclick="setColor('cyan')">🔵</button>
+</div>
+
+<video id="video" autoplay playsinline style="display:none;"></video>
 <canvas id="canvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -35,6 +60,89 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+let lastX = null;
+let lastY = null;
+let color = "lime";
+
+function setColor(c) {
+    color = c;
+}
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+const hands = new Hands({
+    locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.6,
+    minTrackingConfidence: 0.6
+});
+
+function isFingerUp(hand, tip, pip) {
+    return hand[tip].y < hand[pip].y;
+}
+
+hands.onResults(results => {
+
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        lastX = null;
+        lastY = null;
+        return;
+    }
+
+    const hand = results.multiHandLandmarks[0];
+
+    const indexUp = isFingerUp(hand, 8, 6);
+    const middleUp = isFingerUp(hand, 12, 10);
+
+    const x = hand[8].x * canvas.width;
+    const y = hand[8].y * canvas.height;
+
+    // ✌️ iki parmak = dur
+    if (indexUp && middleUp) {
+        lastX = null;
+        lastY = null;
+        return;
+    }
+
+    // ☝️ tek parmak = yaz
+    if (indexUp) {
+        if (lastX && lastY) {
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            ctx.stroke();
+        }
+
+        lastX = x;
+        lastY = y;
+    } else {
+        lastX = null;
+        lastY = null;
+    }
+});
+
+const camera = new Camera(video, {
+    onFrame: async () => {
+        await hands.send({ image: video });
+    },
+    width: 640,
+    height: 480
+});
+
+camera.start();
+</script>
+
+</body>
+</html>
 let lastX = null;
 let lastY = null;
 
