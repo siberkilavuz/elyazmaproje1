@@ -1,258 +1,154 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>El Yazma PRO</title>
-
-<style>
-body { margin:0; background:black; overflow:hidden; font-family:'Segoe UI',Tahoma,sans-serif; }
-canvas { position:absolute; top:0; left:0; }
-
-#status {
-    position:fixed;
-    top:20px;
-    left:20px;
-    color:white;
-    background:rgba(0,0,0,0.7);
-    padding:12px 20px;
-    border-radius:30px;
-    z-index:10;
-    backdrop-filter:blur(5px);
-}
-
-.control-panel {
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(30,30,30,0.9);
-    backdrop-filter:blur(10px);
-    padding:15px 25px;
-    border-radius:50px;
-    display:flex;
-    gap:20px;
-    z-index:20;
-    flex-wrap:wrap;
-    justify-content:center;
-}
-
-button {
-    background:rgba(255,255,255,0.1);
-    border:1px solid rgba(255,255,255,0.2);
-    color:white;
-    padding:10px 20px;
-    border-radius:30px;
-    cursor:pointer;
-    font-size:16px;
-    transition:all 0.3s;
-}
-
-button:hover {
-    background:rgba(255,255,255,0.2);
-}
-
-.color-picker {
-    display:flex;
-    gap:10px;
-    align-items:center;
-}
-
-.color-dot {
-    width:30px;
-    height:30px;
-    border-radius:50%;
-    cursor:pointer;
-    border:2px solid transparent;
-}
-
-.color-dot.selected {
-    border-color:white;
-}
-
-.color-dot[data-color="green"] { background:#00ff00; }
-.color-dot[data-color="red"] { background:#ff0000; }
-.color-dot[data-color="blue"] { background:#0000ff; }
-.color-dot[data-color="yellow"] { background:#ffff00; }
-.color-dot[data-color="white"] { background:#ffffff; }
-
-#coords {
-    position:fixed;
-    top:20px;
-    right:20px;
-    color:white;
-    background:rgba(0,0,0,0.5);
-    padding:8px 15px;
-    border-radius:20px;
-    z-index:10;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Takibi ile Hava Yazma (Basit Örnek)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Kaydırma çubuklarını gizle */
+            background-color: black;
+            color: white;
+            font-family: sans-serif;
+        }
+        #video-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        video, canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Videoyu ekranı kaplayacak şekilde ölçekle */
+        }
+        canvas {
+            border: 2px solid white; /* Canvas'ı görmek için, isteğe bağlı */
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            pointer-events: none; /* Tıklanmayı engelle */
+        }
+    </style>
 </head>
-
 <body>
-
-<div id="status">🔄 Yükleniyor...</div>
-<div id="coords">📌 Pozisyon: - , -</div>
-
-<video id="video" autoplay playsinline style="display:none;"></video>
-<canvas id="canvas"></canvas>
-
-<div class="control-panel">
-    <div class="color-picker">
-        <div class="color-dot selected" data-color="green" onclick="setColor('green')"></div>
-        <div class="color-dot" data-color="red" onclick="setColor('red')"></div>
-        <div class="color-dot" data-color="blue" onclick="setColor('blue')"></div>
-        <div class="color-dot" data-color="yellow" onclick="setColor('yellow')"></div>
-        <div class="color-dot" data-color="white" onclick="setColor('white')"></div>
+    <div id="info">Kamera izni ver ve elini kameraya göster. İşaret parmağının ucu takip ediliyor.</div>
+    <div id="video-container">
+        <video id="video" playsinline style="transform: scaleX(-1);"></video> <!-- Yatay ayna efekti -->
+        <canvas id="output-canvas" style="transform: scaleX(-1);"></canvas>
     </div>
-    
-    <button onclick="clearCanvas()">🗑️ Temizle</button>
-    <button onclick="saveDrawing()">💾 Kaydet</button>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.3/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
+    <!-- MediaPipe Kütüphaneleri -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
-<script>
-// Renk eşleştirme
-const colorMap = {
-    'green': '#00ff00',
-    'red': '#ff0000',
-    'blue': '#0000ff',
-    'yellow': '#ffff00',
-    'white': '#ffffff'
-};
+    <script type="module">
+        // --- MediaPipe Hands için gerekli tanımlamalar ---
+        import { Hands, Results } from 'https://cdn.skypack.dev/@mediapipe/hands';
+        import { Camera } from 'https://cdn.skypack.dev/@mediapipe/camera_utils';
+        import { drawConnectors, drawLandmarks } from 'https://cdn.skypack.dev/@mediapipe/drawing_utils';
 
-let currentColor = '#00ff00';
-let lastX = null;
-let lastY = null;
-let isDrawing = true;
+        // --- HTML elementlerini seç ---
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('output-canvas');
+        const canvasCtx = canvasElement.getContext('2d');
 
-// DOM elementleri
-const statusText = document.getElementById("status");
-const coordsText = document.getElementById("coords");
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-// Canvas ayarları
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-ctx.lineWidth = 5;
-ctx.strokeStyle = currentColor;
-
-// Pencere boyutu değişince
-window.addEventListener('resize', () => {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    ctx.putImageData(imageData, 0, 0);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = currentColor;
-});
-
-// Renk seçme
-window.setColor = (color) => {
-    currentColor = colorMap[color];
-    ctx.strokeStyle = currentColor;
-    
-    document.querySelectorAll('.color-dot').forEach(dot => {
-        dot.classList.remove('selected');
-        if(dot.dataset.color === color) {
-            dot.classList.add('selected');
-        }
-    });
-};
-
-// Temizleme
-window.clearCanvas = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-};
-
-// Kaydetme
-window.saveDrawing = () => {
-    const link = document.createElement('a');
-    link.download = `cizim-${new Date().getTime()}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
-};
-
-// MediaPipe eller
-window.onload = async () => {
-    try {
-        if (typeof Hands === "undefined") {
-            statusText.innerText = "❌ MediaPipe yüklenemedi!";
-            return;
-        }
-
-        statusText.innerText = "✅ Kamera başlatılıyor...";
-
+        // --- MediaPipe Hands nesnesini oluştur ve yapılandır ---
         const hands = new Hands({
             locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.3/${file}`;
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
             }
         });
 
+        // El algılama seçenekleri
         hands.setOptions({
-            maxNumHands: 1,
+            maxNumHands: 1, // Sadece bir eli takip et
             modelComplexity: 1,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
 
-        hands.onResults((results) => {
-            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-                statusText.innerText = "👋 El bekleniyor...";
-                lastX = null;
-                lastY = null;
-                coordsText.innerText = "📌 Pozisyon: - , -";
-                return;
-            }
+        // --- Her sonuç üretildiğinde (her karede) çalışacak fonksiyon ---
+        function onResults(results) {
+            // Canvas'ı temizle (bir önceki karede çizilenleri sil)
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-            statusText.innerText = "✋ El algılandı!";
-            
-            const landmarks = results.multiHandLandmarks[0];
-            const indexTip = landmarks[8]; // İşaret parmağı ucu
-            
-            const x = indexTip.x * canvas.width;
-            const y = indexTip.y * canvas.height;
-            
-            // Koordinatları göster
-            coordsText.innerText = `📌 İşaret: ${Math.round(x)}, ${Math.round(y)}`;
-            
-            // Çizim yap
-            if (isDrawing && lastX && lastY) {
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(x, y);
-                ctx.stroke();
-            }
-            
-            lastX = x;
-            lastY = y;
-        });
+            // Video karesini canvas'a arka plan olarak çiz (şeffaflık için yorum satırına alınabilir)
+            // canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-        // Kamerayı başlat
-        const camera = new Camera(video, {
+            // Eğer bir el algılandıysa
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                // İlk elin landmarklarını (noktalarını) al
+                const landmarks = results.multiHandLandmarks[0];
+
+                // Elin ana hatlarını çiz (isteğe bağlı, yeşil çizgiler)
+                drawConnectors(canvasCtx, landmarks, Hands.HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
+
+                // Tüm noktaları çiz (isteğe bağlı, kırmızı noktalar)
+                // drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', radius: 2 });
+
+                // --- İşaret parmağının ucunu (landmark 8) bul ve belirgin bir şekilde çiz ---
+                const indexFingerTip = landmarks[8]; // Landmark 8 = işaret parmağı ucu
+                
+                if (indexFingerTip) {
+                    // Normalize koordinatları (0-1 arası) canvas pixel koordinatlarına çevir
+                    const x = indexFingerTip.x * canvasElement.width;
+                    const y = indexFingerTip.y * canvasElement.height;
+
+                    // Parmağın ucuna büyük, parlak bir daire çiz (sarı/beyaz)
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(x, y, 15, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = 'cyan'; // Neon efekti için cyan
+                    canvasCtx.shadowColor = 'white';
+                    canvasCtx.shadowBlur = 20;
+                    canvasCtx.fill();
+                    // Üzerine ikinci bir küçük daire
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(x, y, 7, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = 'white';
+                    canvasCtx.shadowBlur = 30;
+                    canvasCtx.fill();
+                    
+                    // Gölgeyi sıfırla (sonraki çizimleri etkilememesi için)
+                    canvasCtx.shadowBlur = 0;
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        // Sonuç işleyiciyi (onResults) MediaPipe Hands nesnesine bağla
+        hands.onResults(onResults);
+
+        // --- Kamerayı başlat ve MediaPipe'e bağla ---
+        const camera = new Camera(videoElement, {
             onFrame: async () => {
-                await hands.send({image: video});
+                // Her karede, video karesini MediaPipe'e gönder
+                await hands.send({ image: videoElement });
             },
-            width: 640,
-            height: 480
+            width: 1280,
+            height: 720
         });
+        camera.start();
 
-        await camera.start();
-        statusText.innerText = "✅ Hazır! İşaret parmağınızla yazın";
-        
-    } catch (error) {
-        console.error("Hata:", error);
-        statusText.innerText = "❌ Hata oluştu: " + error.message;
-    }
-};
-</script>
+        // Canvas boyutlarını ayarla (video ile aynı olmalı)
+        canvasElement.width = 1280;
+        canvasElement.height = 720;
+
+        console.log("Uygulama başlatıldı. Kamera izni istenecek.");
+    </script>
 </body>
 </html>
