@@ -1,154 +1,129 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>El Takibi ile Hava Yazma (Basit Örnek)</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* Kaydırma çubuklarını gizle */
-            background-color: black;
-            color: white;
-            font-family: sans-serif;
-        }
-        #video-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        video, canvas {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Videoyu ekranı kaplayacak şekilde ölçekle */
-        }
-        canvas {
-            border: 2px solid white; /* Canvas'ı görmek için, isteğe bağlı */
-        }
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 10;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-            pointer-events: none; /* Tıklanmayı engelle */
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Senin İçin ❤️</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #ff758c, #ff7eb3);
+      color: white;
+      text-align: center;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-family: 'Pacifico', cursive;
+      font-size: 3rem;
+      animation: fadeIn 2s ease-in-out;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      animation: fadeIn 3s ease-in-out;
+    }
+
+    .heart {
+      position: fixed;
+      bottom: -20px;
+      font-size: 20px;
+      animation: floatUp 5s linear infinite;
+      opacity: 0.7;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(0); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translateY(-100vh); opacity: 0; }
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .photo {
+      overflow: hidden;
+      border-radius: 25px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+      transition: transform 0.4s, box-shadow 0.4s;
+    }
+
+    .photo:hover {
+      transform: scale(1.08) rotate(1deg);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    .photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .message {
+      margin-top: 20px;
+      font-size: 1.1rem;
+      padding: 0 20px;
+      line-height: 1.6;
+    }
+
+    footer {
+      margin: 40px 0;
+      font-size: 1.2rem;
+      font-weight: bold;
+      animation: fadeIn 4s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
-    <div id="info">Kamera izni ver ve elini kameraya göster. İşaret parmağının ucu takip ediliyor.</div>
-    <div id="video-container">
-        <video id="video" playsinline style="transform: scaleX(-1);"></video> <!-- Yatay ayna efekti -->
-        <canvas id="output-canvas" style="transform: scaleX(-1);"></canvas>
-    </div>
 
-    <!-- MediaPipe Kütüphaneleri -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <h1>Seninle Her Şey Daha Güzel ❤️</h1>
+  <p>Bu sayfa sadece sana özel...</p>
 
-    <script type="module">
-        // --- MediaPipe Hands için gerekli tanımlamalar ---
-        import { Hands, Results } from 'https://cdn.skypack.dev/@mediapipe/hands';
-        import { Camera } from 'https://cdn.skypack.dev/@mediapipe/camera_utils';
-        import { drawConnectors, drawLandmarks } from 'https://cdn.skypack.dev/@mediapipe/drawing_utils';
+  <div class="gallery">
+    <div class="photo"><img src="foto1.jpg"></div>
+    <div class="photo"><img src="foto2.jpg"></div>
+    <div class="photo"><img src="foto3.jpg"></div>
+    <div class="photo"><img src="foto4.jpg"></div>
+  </div>
 
-        // --- HTML elementlerini seç ---
-        const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('output-canvas');
-        const canvasCtx = canvasElement.getContext('2d');
+  <div class="message">
+    Seninle geçen her an benim için çok değerli... 
+    Gülüşün, sesin, her şeyin kalbimde ayrı bir yer kaplıyor.
+    İyi ki varsın ❤️
+  </div>
 
-        // --- MediaPipe Hands nesnesini oluştur ve yapılandır ---
-        const hands = new Hands({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-            }
-        });
+  <footer>
+    Seni Sonsuza Kadar Seveceğim 💖
+  </footer>
 
-        // El algılama seçenekleri
-        hands.setOptions({
-            maxNumHands: 1, // Sadece bir eli takip et
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
+  <script>
+    function createHeart() {
+      const heart = document.createElement('div');
+      heart.classList.add('heart');
+      heart.innerHTML = '❤️';
+      heart.style.left = Math.random() * 100 + 'vw';
+      heart.style.animationDuration = (Math.random() * 3 + 3) + 's';
+      document.body.appendChild(heart);
 
-        // --- Her sonuç üretildiğinde (her karede) çalışacak fonksiyon ---
-        function onResults(results) {
-            // Canvas'ı temizle (bir önceki karede çizilenleri sil)
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      setTimeout(() => {
+        heart.remove();
+      }, 5000);
+    }
 
-            // Video karesini canvas'a arka plan olarak çiz (şeffaflık için yorum satırına alınabilir)
-            // canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+    setInterval(createHeart, 300);
+  </script>
 
-            // Eğer bir el algılandıysa
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                // İlk elin landmarklarını (noktalarını) al
-                const landmarks = results.multiHandLandmarks[0];
-
-                // Elin ana hatlarını çiz (isteğe bağlı, yeşil çizgiler)
-                drawConnectors(canvasCtx, landmarks, Hands.HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
-
-                // Tüm noktaları çiz (isteğe bağlı, kırmızı noktalar)
-                // drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', radius: 2 });
-
-                // --- İşaret parmağının ucunu (landmark 8) bul ve belirgin bir şekilde çiz ---
-                const indexFingerTip = landmarks[8]; // Landmark 8 = işaret parmağı ucu
-                
-                if (indexFingerTip) {
-                    // Normalize koordinatları (0-1 arası) canvas pixel koordinatlarına çevir
-                    const x = indexFingerTip.x * canvasElement.width;
-                    const y = indexFingerTip.y * canvasElement.height;
-
-                    // Parmağın ucuna büyük, parlak bir daire çiz (sarı/beyaz)
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 15, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = 'cyan'; // Neon efekti için cyan
-                    canvasCtx.shadowColor = 'white';
-                    canvasCtx.shadowBlur = 20;
-                    canvasCtx.fill();
-                    // Üzerine ikinci bir küçük daire
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 7, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = 'white';
-                    canvasCtx.shadowBlur = 30;
-                    canvasCtx.fill();
-                    
-                    // Gölgeyi sıfırla (sonraki çizimleri etkilememesi için)
-                    canvasCtx.shadowBlur = 0;
-                }
-            }
-            canvasCtx.restore();
-        }
-
-        // Sonuç işleyiciyi (onResults) MediaPipe Hands nesnesine bağla
-        hands.onResults(onResults);
-
-        // --- Kamerayı başlat ve MediaPipe'e bağla ---
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                // Her karede, video karesini MediaPipe'e gönder
-                await hands.send({ image: videoElement });
-            },
-            width: 1280,
-            height: 720
-        });
-        camera.start();
-
-        // Canvas boyutlarını ayarla (video ile aynı olmalı)
-        canvasElement.width = 1280;
-        canvasElement.height = 720;
-
-        console.log("Uygulama başlatıldı. Kamera izni istenecek.");
-    </script>
 </body>
 </html>
